@@ -62,7 +62,7 @@ async def get_out_of_stock() -> list:
     products = await get_all_products()
     return [
         p for p in products
-        if p.get("track_stock") and (p.get("stock_balance") or 0) <= 0
+        if p.get("track_stock") and float(p.get("stock_balance") or 0) <= 0
     ]
 
 
@@ -73,8 +73,8 @@ async def get_low_stock() -> list:
     for p in products:
         if not p.get("track_stock"):
             continue
-        balance = p.get("stock_balance") or 0
-        threshold = p.get("low_stock_thershold") or 0
+        balance = float(p.get("stock_balance") or 0)
+        threshold = float(p.get("low_stock_thershold") or 0)
         if balance <= 0:
             result.append({**p, "_status": "out"})
         elif threshold and balance <= threshold:

@@ -1,3 +1,4 @@
+from datetime import datetime
 """
 Telegram message handlers — routes natural language to Daftra API calls.
 """
@@ -78,6 +79,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 txns = await daftra.get_stock_transactions()
                 msg = fmt.fmt_stock_movement(txns, "all" if not arabic else "الكل", arabic)
+            await _reply(update, msg)
+
+        elif intent == "yesterday_sales":
+            from datetime import timedelta
+            yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+            invoices = await daftra.get_invoices(date_from=yesterday, date_to=yesterday)
+            period = "أمس" if arabic else "Yesterday"
+            msg = fmt.fmt_sales_summary(invoices, period, arabic)
             await _reply(update, msg)
 
         elif intent == "today_sales":
