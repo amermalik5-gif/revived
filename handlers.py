@@ -186,3 +186,23 @@ async def handle_debug(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _reply(update, "\n".join(lines[:40]))
     except Exception as e:
         await _reply(update, f"Error: {e}")
+
+
+@authorized_only
+async def handle_debug2(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show money/amount fields from first invoice."""
+    try:
+        invoices = await daftra.get_invoices()
+        if not invoices:
+            await _reply(update, "No invoices found")
+            return
+        inv = invoices[0]
+        # Show ALL fields that might relate to money
+        money_keywords = ["total", "paid", "amount", "balance", "due", "subtotal", "tax", "discount", "grand", "price", "sum"]
+        lines = ["*All invoice fields:*\n"]
+        for k, v in inv.items():
+            if any(kw in k.lower() for kw in money_keywords) or v not in [None, "", 0, "0"]:
+                lines.append(f"`{k}`: {repr(v)}")
+        await _reply(update, "\n".join(lines[:60]))
+    except Exception as e:
+        await _reply(update, f"Error: {e}")
