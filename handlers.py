@@ -206,3 +206,34 @@ async def handle_debug2(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _reply(update, "\n".join(lines[:60]))
     except Exception as e:
         await _reply(update, f"Error: {e}")
+
+
+@authorized_only
+async def handle_debug3(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show raw client fields + sample product track_stock values."""
+    try:
+        # Client fields
+        clients = await daftra.get_clients()
+        msg = f"*Clients returned: {len(clients)}*\n"
+        if clients:
+            c = clients[0]
+            msg += "\n*First client fields:*\n"
+            for k, v in list(c.items())[:30]:
+                msg += f"`{k}`: {repr(v)}\n"
+        await _reply(update, msg)
+
+        # Product track_stock sample
+        products = await daftra.get_all_products()
+        track_values = {}
+        for p in products[:50]:
+            tv = repr(p.get("track_stock"))
+            track_values[tv] = track_values.get(tv, 0) + 1
+        msg2 = f"*Products total: {len(products)}*\n*track_stock values (first 50):*\n"
+        for v, count in track_values.items():
+            msg2 += f"`{v}`: {count} products\n"
+        # Show balance field distribution
+        balance_zero = sum(1 for p in products if float(p.get("stock_balance") or 0) <= 0)
+        msg2 += f"\nProducts with balance ≤ 0: {balance_zero}"
+        await _reply(update, msg2)
+    except Exception as e:
+        await _reply(update, f"Error: {e}")
