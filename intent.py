@@ -1,19 +1,24 @@
 """
 Intent detection for bilingual (Arabic / English) natural language queries.
-Uses keyword/regex matching — no external NLP service needed.
 """
 
 import re
 
-# ── Intent patterns ───────────────────────────────────────────────────────────
+# ORDER MATTERS — more specific patterns must come before general ones
 INTENTS = [
-    # Stock queries
-    ("stock_query",    r"stock|مخزون|مخزن|كمية|كم متبقي|كم باقي|كم عندي|موجود|inventory"),
-    ("low_stock",      r"low.?stock|ناقص|نفد|نفذ|خلص|منتهي|out.?of.?stock|نقص|ايه اللي نفد|أي منتجات"),
-    ("stock_movement", r"movement|حركة|دخل|خرج|وارد|صادر|transaction|history|تاريخ"),
-    ("all_stock",      r"all.?stock|كل المخزون|كل المنتجات|قائمة المنتجات|all product"),
+    # All stock list (must be before stock_query)
+    ("all_stock",      r"all.?stock|show.?me.?all|show.?all|كل المخزون|كل المنتجات|قائمة المنتجات|all product|list.?stock|list.?product"),
 
-    # Sales / invoices
+    # Low stock (must be before stock_query)
+    ("low_stock",      r"low.?stock|out.?of.?stock|ناقص|نفد|نفذ|خلص|منتهي|نقص|أي منتجات|اي منتجات"),
+
+    # Stock movement (must be before stock_query)
+    ("stock_movement", r"movement|حركة|دخل|خرج|وارد|صادر|transaction|history|تاريخ"),
+
+    # Specific product stock query
+    ("stock_query",    r"stock|مخزون|مخزن|كمية|كم متبقي|كم باقي|كم عندي|موجود|inventory|كم ال"),
+
+    # Sales — yesterday before today (more specific first)
     ("yesterday_sales", r"yesterday|امس|أمس|مبارح|البارح"),
     ("today_sales",     r"today.?sale|today.?revenue|مبيعات اليوم|إيرادات اليوم|اليوم"),
     ("week_sales",      r"week.?sale|this.?week|مبيعات الأسبوع|الأسبوع"),
@@ -38,7 +43,6 @@ COMPILED = [(intent, re.compile(pattern, re.IGNORECASE)) for intent, pattern in 
 
 
 def detect_intent(text: str) -> str:
-    """Return the first matching intent, or 'unknown'."""
     for intent, pattern in COMPILED:
         if pattern.search(text):
             return intent
@@ -46,18 +50,14 @@ def detect_intent(text: str) -> str:
 
 
 def extract_product_name(text: str) -> str | None:
-    """
-    Try to extract a product name from the query.
-    Strips common question words and returns what's left (best-effort).
-    """
     cleaned = re.sub(
-        r"(stock|مخزون|كمية|كم|what is|what's|كم عندي|كم باقي|موجود|ما هو|ما|of|من|عن|for|ل)",
+        r"(stock|مخزون|كمية|كم|what is|what'?s|كم عندي|كم باقي|موجود|ما هو|ما|of|من|عن|for|ل|show|me|all|list)",
         " ", text, flags=re.IGNORECASE
     ).strip()
     cleaned = re.sub(r"[؟?]+$", "", cleaned).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return cleaned if len(cleaned) > 1 else None
 
 
 def is_arabic(text: str) -> bool:
-    """Return True if the message contains Arabic characters."""
     return bool(re.search(r"[؀-ۿ]", text))
