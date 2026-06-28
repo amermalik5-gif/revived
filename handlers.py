@@ -280,3 +280,35 @@ async def handle_debug5(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _reply(update, msg)
     except Exception as e:
         await _reply(update, f"Error: {e}")
+
+
+@authorized_only
+async def handle_debug6(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Try multiple Daftra endpoints to find client balance data."""
+    import httpx
+    from config import DAFTRA_API_KEY, DAFTRA_SUBDOMAIN
+    HEADERS = {"apikey": DAFTRA_API_KEY, "Accept": "application/json"}
+    BASE = f"https://{DAFTRA_SUBDOMAIN}.daftra.com/api2"
+    endpoints = [
+        "account_statements.json",
+        "client_balances.json",
+        "accounts.json",
+        "ledger.json",
+        "invoices.json?payment_status=0",
+        "invoices.json?type=0&limit=5",
+    ]
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            for ep in endpoints:
+                r = await client.get(f"{BASE}/{ep}", headers=HEADERS)
+                data = r.json()
+                code = data.get("code")
+                count = len(data.get("data", []))
+                msg = f"`{ep}` → code:{code}, records:{count}"
+                if code == 200 and count > 0:
+                    first = data["data"][0]
+                    keys = list(first.keys())
+                    msg += f", keys: {keys}"
+                await _reply(update, msg)
+    except Exception as e:
+        await _reply(update, f"Error: {e}")
