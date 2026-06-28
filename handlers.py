@@ -253,3 +253,30 @@ async def handle_debug4(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _reply(update, msg)
     except Exception as e:
         await _reply(update, f"Error: {e}")
+
+
+@authorized_only
+async def handle_debug5(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Fetch single client detail endpoint to find balance field."""
+    import httpx
+    from config import DAFTRA_API_KEY, DAFTRA_SUBDOMAIN
+    HEADERS = {"apikey": DAFTRA_API_KEY, "Accept": "application/json"}
+    BASE = f"https://{DAFTRA_SUBDOMAIN}.daftra.com/api2"
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            # Try single client detail
+            r = await client.get(f"{BASE}/clients/141.json", headers=HEADERS)
+            data = r.json()
+            msg = f"*Status: {data.get('code')}*\n"
+            c = data.get("data", {}).get("Client", {})
+            for k, v in c.items():
+                if k in ("balance", "total_balance", "account_balance", "outstanding",
+                         "debit", "credit", "starting_balance", "total_due", "amount_due"):
+                    msg += f"🔑 `{k}`: {repr(v)}\n"
+            if len(msg) < 50:
+                msg += "\n*All fields:*\n"
+                for k, v in list(c.items()):
+                    msg += f"`{k}`: {repr(v)}\n"
+        await _reply(update, msg)
+    except Exception as e:
+        await _reply(update, f"Error: {e}")
