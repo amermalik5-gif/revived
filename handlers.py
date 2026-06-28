@@ -169,3 +169,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     arabic = is_arabic(update.message.text or "")
     await _reply(update, fmt.fmt_help(arabic))
+
+
+@authorized_only
+async def handle_debug(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show raw field names from first invoice — for debugging only."""
+    try:
+        invoices = await daftra.get_invoices()
+        if not invoices:
+            await _reply(update, "No invoices found")
+            return
+        inv = invoices[0]
+        lines = ["*Invoice fields (first record):*\n"]
+        for k, v in inv.items():
+            lines.append(f"`{k}`: {v}")
+        await _reply(update, "\n".join(lines[:40]))
+    except Exception as e:
+        await _reply(update, f"Error: {e}")
