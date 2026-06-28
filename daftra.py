@@ -135,7 +135,7 @@ async def get_outstanding_invoices() -> list:
     invoices = await get_invoices()
     return [
         inv for inv in invoices
-        if float(inv.get("balance") or inv.get("amount_due") or 0) > 0
+        if float(inv.get("summary_unpaid") or 0) > 0
     ]
 
 
