@@ -1,24 +1,27 @@
 """
 Intent detection for bilingual (Arabic / English) natural language queries.
+ORDER MATTERS — specific patterns must come before general ones.
 """
 
 import re
 
-# ORDER MATTERS — more specific patterns must come before general ones
 INTENTS = [
-    # All stock list (must be before stock_query)
+    # Summary first — before today_sales so "ملخص اليوم" doesn't match اليوم
+    ("daily_summary", r"summary|ملخص|تقرير|report|morning|صباح"),
+
+    # All stock — before stock_query
     ("all_stock",      r"all.?stock|show.?me.?all|show.?all|كل المخزون|كل المنتجات|قائمة المنتجات|all product|list.?stock|list.?product"),
 
-    # Low stock (must be before stock_query)
+    # Low stock — before stock_query
     ("low_stock",      r"low.?stock|out.?of.?stock|ناقص|نفد|نفذ|خلص|منتهي|نقص|أي منتجات|اي منتجات"),
 
-    # Stock movement (must be before stock_query)
+    # Stock movement — before stock_query
     ("stock_movement", r"movement|حركة|دخل|خرج|وارد|صادر|transaction|history|تاريخ"),
 
-    # Specific product stock query
+    # Specific product stock
     ("stock_query",    r"stock|مخزون|مخزن|كمية|كم متبقي|كم باقي|كم عندي|موجود|inventory|كم ال"),
 
-    # Sales — yesterday before today (more specific first)
+    # Sales — yesterday before today
     ("yesterday_sales", r"yesterday|امس|أمس|مبارح|البارح"),
     ("today_sales",     r"today.?sale|today.?revenue|مبيعات اليوم|إيرادات اليوم|اليوم"),
     ("week_sales",      r"week.?sale|this.?week|مبيعات الأسبوع|الأسبوع"),
@@ -26,14 +29,11 @@ INTENTS = [
     ("outstanding",     r"outstanding|unpaid|overdue|مديونية|دين|فاتورة غير مدفوعة|مستحق"),
 
     # Suppliers
-    ("suppliers",  r"supplier|مورد|موردين|payable|مستحق للمورد"),
+    ("suppliers", r"supplier|مورد|موردين|payable|مستحق للمورد"),
 
     # Expenses & profit
     ("expenses", r"expense|مصروف|مصاريف|تكاليف|cost"),
     ("profit",   r"profit|ربح|أرباح|net|صافي"),
-
-    # Summary
-    ("daily_summary", r"summary|ملخص|تقرير|report|morning|صباح"),
 
     # Help
     ("help", r"help|مساعدة|ماذا تعرف|ايش تعرف|وش تعرف|كيف تساعد|commands"),
