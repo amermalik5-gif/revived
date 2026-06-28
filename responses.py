@@ -211,7 +211,7 @@ def fmt_daily_summary(
     sales_collected = sum(float(inv.get("summary_paid") or 0) for inv in today_invoices)
     sales_count = len(today_invoices)
     oos_count = len(out_of_stock)
-    outstanding_total = sum(float(inv.get("summary_unpaid") or 0) for inv in outstanding)
+    outstanding_total = sum(float(c.get("balance") or 0) for c in outstanding)
 
     if arabic:
         msg = (
@@ -287,3 +287,32 @@ def fmt_help(arabic: bool = False) -> str:
         "📊 *Summary*\n"
         "  • Daily summary"
     )
+
+
+# ── Client Balances (replaces outstanding invoices) ───────────────────────────
+
+def fmt_client_balances(clients: list, arabic: bool = False) -> str:
+    if not clients:
+        return "✅ لا يوجد عملاء بأرصدة مستحقة" if arabic else "✅ No clients with outstanding balances"
+
+    total = sum(float(c.get("balance") or 0) for c in clients)
+
+    header = (
+        f"📋 *أرصدة العملاء المستحقة* ({len(clients)} عميل)\n"
+        f"الإجمالي: *{_cur(total)}*\n\n"
+    ) if arabic else (
+        f"📋 *Outstanding Client Balances* ({len(clients)} clients)\n"
+        f"Total: *{_cur(total)}*\n\n"
+    )
+    lines = [header]
+    # Sort by balance descending
+    sorted_clients = sorted(clients, key=lambda c: float(c.get("balance") or 0), reverse=True)
+    for c in sorted_clients[:20]:
+        name = c.get("business_name") or c.get("businessname") or c.get("first_name") or c.get("name") or "—"
+        balance = float(c.get("balance") or 0)
+        lines.append(f"• {name}: *{_cur(balance)}*")
+
+    if len(clients) > 20:
+        lines.append(f"\n... +{len(clients) - 20} {'أخرى' if arabic else 'more'}")
+
+    return "\n".join(lines)
