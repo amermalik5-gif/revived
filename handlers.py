@@ -237,3 +237,19 @@ async def handle_debug3(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _reply(update, msg2)
     except Exception as e:
         await _reply(update, f"Error: {e}")
+
+
+@authorized_only
+async def handle_debug4(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show ALL fields of first client + single client detail endpoint."""
+    try:
+        clients = await daftra.get_clients()
+        if not clients:
+            await _reply(update, "No clients returned"); return
+        c = clients[0]
+        msg = f"*ALL fields for client {c.get('id')}:*\n"
+        for k, v in c.items():
+            msg += f"`{k}`: {repr(v)}\n"
+        await _reply(update, msg)
+    except Exception as e:
+        await _reply(update, f"Error: {e}")

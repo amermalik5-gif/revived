@@ -8,7 +8,7 @@ import asyncio
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 
 from config import TELEGRAM_BOT_TOKEN, AUTHORIZED_USER_ID
-from handlers import handle_message, handle_start, handle_debug, handle_debug2, handle_debug3
+from handlers import handle_message, handle_start, handle_debug, handle_debug2, handle_debug3, handle_debug4
 from scheduler import start_scheduler
 
 logging.basicConfig(
@@ -34,6 +34,7 @@ def main():
     app.add_handler(CommandHandler("debug", handle_debug))
     app.add_handler(CommandHandler("debug2", handle_debug2))
     app.add_handler(CommandHandler("debug3", handle_debug3))
+    app.add_handler(CommandHandler("debug4", handle_debug4))
 
     # All text messages → NLP handler
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
