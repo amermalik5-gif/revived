@@ -312,3 +312,86 @@ async def handle_debug6(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await _reply(update, msg)
     except Exception as e:
         await _reply(update, f"Error: {e}")
+
+
+@authorized_only
+async def handle_debugall(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """All diagnostics in one shot: invoices by type, endpoint probe, product stats."""
+    import httpx
+    from config import DAFTRA_API_KEY, DAFTRA_SUBDOMAIN
+    H = {"apikey": DAFTRA_API_KEY, "Accept": "application/json"}
+    B = f"https://{DAFTRA_SUBDOMAIN}.daftra.com/api2"
+
+    await _reply(update, "🔍 Running full diagnostics... (3 messages coming)")
+
+    async with httpx.AsyncClient(timeout=60) as cl:
+
+        # ── 1. Invoices by type + total unpaid ──
+        inv_stats = {}
+        total_unpaid = 0.0
+        page = 1
+        while True:
+            r = await cl.get(f"{B}/invoices.json", headers=H,
+                             params={"limit": 100, "page": page})
+            d = r.json()
+            if d.get("code") != 200:
+                break
+            batch = d.get("data", [])
+            if not batch:
+                break
+            for item in batch:
+                inv = item.get("Invoice", {})
+                t = str(inv.get("type", "?"))
+                if t not in inv_stats:
+                    inv_stats[t] = {"count": 0, "unpaid": 0.0}
+                inv_stats[t]["count"] += 1
+                inv_stats[t]["unpaid"] += float(inv.get("summary_unpaid") or 0)
+                total_unpaid += float(inv.get("summary_unpaid") or 0)
+            pg = d.get("pagination", {})
+            if page >= int(pg.get("page_count", 1)):
+                break
+            page += 1
+
+        lines = ["*📊 Invoices by type:*"]
+        for t, s in sorted(inv_stats.items()):
+            lines.append(f"  type `{t}`: {s['count']} invoices | unpaid: {s['unpaid']:.2f} JOD")
+        lines.append(f"*Total unpaid all types: {total_unpaid:.2f} JOD*")
+        await _reply(update, "\n".join(lines))
+
+        # ── 2. Probe unknown endpoints ──
+        probes = [
+            "account_statements.json", "client_balances.json", "client_ledger.json",
+            "receipts.json", "payments.json", "credit_notes.json",
+            "return_invoices.json", "purchase_invoices.json",
+            "journals.json", "transactions.json", "account_transactions.json",
+        ]
+        found = ["*🔍 Endpoint probe:*"]
+        for ep in probes:
+            r2 = await cl.get(f"{B}/{ep}", headers=H, params={"limit": 1})
+            d2 = r2.json()
+            code2 = d2.get("code")
+            cnt = len(d2.get("data", []))
+            icon = "✅" if code2 == 200 else "❌"
+            found.append(f"{icon} `{ep}` → code:{code2}, records:{cnt}")
+        await _reply(update, "\n".join(found))
+
+        # ── 3. Products: track_stock distribution ──
+        prods = await daftra.get_all_products()
+        ts_dist = {}
+        zero_bal = 0
+        tracked_zero = 0
+        for p in prods:
+            tv = str(p.get("track_stock"))
+            ts_dist[tv] = ts_dist.get(tv, 0) + 1
+            bal = float(p.get("stock_balance") or 0)
+            if bal <= 0:
+                zero_bal += 1
+                if tv not in ("0", "false", "False", "", "None"):
+                    tracked_zero += 1
+        lines3 = [f"*📦 Products: {len(prods)} total*",
+                  f"  balance ≤ 0: {zero_bal}",
+                  f"  tracked + balance ≤ 0 (= 'out of stock'): {tracked_zero}",
+                  "*track_stock value distribution:*"]
+        for tv, cnt in sorted(ts_dist.items()):
+            lines3.append(f"  `{tv}`: {cnt} products")
+        await _reply(update, "\n".join(lines3))
