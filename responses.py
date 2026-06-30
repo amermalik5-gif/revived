@@ -287,3 +287,69 @@ def fmt_product_search_results(products: list, query: str, arabic: bool = False)
     if count > 25:
         lines.append("... +" + str(count - 25) + (" \u0623\u062e\u0631\u0649" if arabic else " more"))
     return "\n".join(lines)
+
+
+def fmt_help(arabic: bool = False) -> str:
+    if arabic:
+        return (
+            "🤖 *مساعد Revive*\n\n"
+            "اسألني بأسلوبك الطبيعي! مثلاً:\n\n"
+            "📦 *المخزون*\n"
+            "  • كم الكمية المتوفرة من [منتج]؟\n"
+            "  • [اسم المنتج] — سعره وكميته\n"
+            "  • شاشات آيفون 17 — كل الأنواع\n"
+            "  • أي منتجات نفدت؟\n"
+            "  • حركة مخزون [منتج]\n"
+            "  • كل المخزون\n\n"
+            "💵 *المبيعات*\n"
+            "  • مبيعات اليوم / أمس\n"
+            "  • مبيعات الأسبوع / الشهر\n"
+            "  • الفواتير غير المدفوعة\n\n"
+            "🏭 *الموردون والمصاريف*\n"
+            "  • أرصدة الموردين\n"
+            "  • مصاريف الشهر\n\n"
+            "📊 *ملخص*\n"
+            "  • ملخص اليوم"
+        )
+    return (
+        "🤖 *Revive Assistant*\n\n"
+        "Ask me naturally! Examples:\n\n"
+        "📦 *Stock*\n"
+        "  • iphone 17 screens — all variants + cost\n"
+        "  • iphone 17 pro oled — specific product\n"
+        "  • How many [product] in stock?\n"
+        "  • Which products are out of stock?\n"
+        "  • Stock movement for [product]\n"
+        "  • Show all stock\n\n"
+        "💵 *Sales*\n"
+        "  • Today's / yesterday's sales\n"
+        "  • This week's / month's sales\n"
+        "  • Outstanding invoices\n\n"
+        "🏭 *Suppliers & Expenses*\n"
+        "  • Supplier balances\n"
+        "  • This month's expenses\n\n"
+        "📊 *Summary*\n"
+        "  • Daily summary"
+    )
+
+
+def fmt_client_balances(clients: list, arabic: bool = False) -> str:
+    if not clients:
+        return "✅ لا يوجد عملاء بأرصدة مستحقة" if arabic else "✅ No clients with outstanding balances"
+    total = sum(float(c.get("balance") or 0) for c in clients)
+    header = (
+        f"📋 *أرصدة العملاء المستحقة* ({len(clients)} عميل)\n"
+        f"الإجمالي: *{_cur(total)}*\n\n"
+    ) if arabic else (
+        f"📋 *Outstanding Client Balances* ({len(clients)} clients)\n"
+        f"Total: *{_cur(total)}*\n\n"
+    )
+    lines = [header]
+    sorted_clients = sorted(clients, key=lambda c: float(c.get("balance") or 0), reverse=True)
+    for c in sorted_clients[:20]:
+        name = c.get("business_name") or c.get("first_name") or "—"
+        balance = float(c.get("balance") or 0)
+        lines.append(f"• {name}: *{_cur(balance)}*")
+    if len(clients) > 20:
+        lines.append(f"\n... +{len(clients) - 20} {'أخرى' if arabic else 'more'}")
+    return "\n".join(lines)

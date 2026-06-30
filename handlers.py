@@ -163,6 +163,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await _reply(update, msg)
 
         else:
+            # Try treating unknown text as a product search
+            cleaned = extract_product_name(text)
+            if cleaned and len(cleaned) > 2:
+                products = await daftra.search_products(cleaned)
+                if products:
+                    msg = fmt.fmt_product_search_results(products, cleaned, arabic)
+                    await _reply(update, msg)
+                    return
             if arabic:
                 await _reply(update, "❓ لم أفهم سؤالك. اكتب *مساعدة* لرؤية ما أستطيع فعله.")
             else:
