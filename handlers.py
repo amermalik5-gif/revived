@@ -42,6 +42,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if intent == "help" or not text.strip():
             await _reply(update, fmt.fmt_help(arabic))
 
+        elif intent == "product_search":
+            product_name = extract_product_name(text)
+            if product_name and len(product_name) > 1:
+                products = await daftra.search_products(product_name)
+                msg = fmt.fmt_product_search_results(products, product_name, arabic)
+            else:
+                msg = "❓ أخبرني اسم المنتج." if arabic else "❓ Please tell me which product."
+            await _reply(update, msg)
+
         elif intent == "stock_query":
             product_name = extract_product_name(text)
             if product_name and len(product_name) > 1:

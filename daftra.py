@@ -51,10 +51,16 @@ async def get_all_products() -> list:
 
 
 async def search_products(query: str) -> list:
-    """Return products whose name contains the query (case-insensitive)."""
+    """Return products matching all keywords in query (case-insensitive)."""
     products = await get_all_products()
-    q = query.strip().lower()
-    return [p for p in products if q in (p.get("name") or "").lower()]
+    # Split into keywords; all must appear in the product name
+    keywords = [w for w in query.strip().lower().split() if len(w) > 1]
+    if not keywords:
+        return []
+    def matches(p):
+        name = (p.get("name") or "").lower()
+        return all(kw in name for kw in keywords)
+    return [p for p in products if matches(p)]
 
 
 async def get_out_of_stock() -> list:

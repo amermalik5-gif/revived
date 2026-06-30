@@ -246,73 +246,44 @@ def fmt_daily_summary(
     return msg
 
 
-# ── Help ──────────────────────────────────────────────────────────────────────
-
-def fmt_help(arabic: bool = False) -> str:
-    if arabic:
-        return (
-            "🤖 *مساعد Revive*\n\n"
-            "اسألني بأسلوبك الطبيعي! مثلاً:\n\n"
-            "📦 *المخزون*\n"
-            "  • كم الكمية المتوفرة من [منتج]؟\n"
-            "  • أي منتجات نفدت؟\n"
-            "  • حركة مخزون [منتج]\n"
-            "  • كل المخزون\n\n"
-            "💵 *المبيعات*\n"
-            "  • مبيعات اليوم\n"
-            "  • مبيعات أمس\n"
-            "  • مبيعات الأسبوع / الشهر\n"
-            "  • الفواتير غير المدفوعة\n\n"
-            "🏭 *الموردون والمصاريف*\n"
-            "  • أرصدة الموردين\n"
-            "  • مصاريف الشهر\n\n"
-            "📊 *ملخص*\n"
-            "  • ملخص اليوم"
-        )
-    return (
-        "🤖 *Revive Assistant*\n\n"
-        "Ask me naturally! Examples:\n\n"
-        "📦 *Stock*\n"
-        "  • How much stock of [product]?\n"
-        "  • Which products are out of stock?\n"
-        "  • Stock movement for [product]\n"
-        "  • Show all stock\n\n"
-        "💵 *Sales*\n"
-        "  • Today's / yesterday's sales\n"
-        "  • This week's / month's sales\n"
-        "  • Outstanding invoices\n\n"
-        "🏭 *Suppliers & Expenses*\n"
-        "  • Supplier balances\n"
-        "  • This month's expenses\n\n"
-        "📊 *Summary*\n"
-        "  • Daily summary"
-    )
 
 
-# ── Client Balances (replaces outstanding invoices) ───────────────────────────
 
-def fmt_client_balances(clients: list, arabic: bool = False) -> str:
-    if not clients:
-        return "✅ لا يوجد عملاء بأرصدة مستحقة" if arabic else "✅ No clients with outstanding balances"
+def fmt_product_search_results(products: list, query: str, arabic: bool = False) -> str:
+    """Compact list: cost + stock. Single result = full detail; multiple = compact list."""
+    if not products:
+        return ("\u274c \u0644\u0645 \u0623\u062c\u062f \u0645\u0646\u062a\u062c\u0627\u064b \u064a\u0637\u0627\u0628\u0642 " + repr(query)) if arabic else ("\u274c No products found matching " + repr(query))
 
-    total = sum(float(c.get("balance") or 0) for c in clients)
+    if len(products) == 1:
+        return fmt_product_stock(products[0], arabic)
 
+    count = len(products)
     header = (
-        f"📋 *أرصدة العملاء المستحقة* ({len(clients)} عميل)\n"
-        f"الإجمالي: *{_cur(total)}*\n\n"
-    ) if arabic else (
-        f"📋 *Outstanding Client Balances* ({len(clients)} clients)\n"
-        f"Total: *{_cur(total)}*\n\n"
+        ("\U0001f50d *\u0646\u062a\u0627\u0626\u062c \u0627\u0644\u0628\u062d\u062b: " + query + "* (" + str(count) + " \u0645\u0646\u062a\u062c)\n\n")
+        if arabic else
+        ("\U0001f50d *Search: " + query + "* (" + str(count) + " products)\n\n")
     )
     lines = [header]
-    # Sort by balance descending
-    sorted_clients = sorted(clients, key=lambda c: float(c.get("balance") or 0), reverse=True)
-    for c in sorted_clients[:20]:
-        name = c.get("business_name") or c.get("businessname") or c.get("first_name") or c.get("name") or "—"
-        balance = float(c.get("balance") or 0)
-        lines.append(f"• {name}: *{_cur(balance)}*")
-
-    if len(clients) > 20:
-        lines.append(f"\n... +{len(clients) - 20} {'أخرى' if arabic else 'more'}")
-
+    for p in products[:25]:
+        name = p.get("name", "\u2014")
+        balance = float(p.get("stock_balance") or 0)
+        buy = float(p.get("buy_price") or 0)
+        sell = float(p.get("unit_price") or 0)
+        icon = "\u2705" if balance > 0 else "\U0001f6ab"
+        if arabic:
+            lines.append(
+                icon + " *" + name + "*\n"
+                "   \U0001f4e6 \u0627\u0644\u0643\u0645\u064a\u0629: " + str(int(balance)) +
+                " | \U0001f3f7 \u062a\u0643\u0644\u0641\u0629: " + _cur(buy) +
+                " | \U0001f4b0 \u0633\u0639\u0631: " + _cur(sell) + "\n"
+            )
+        else:
+            lines.append(
+                icon + " *" + name + "*\n"
+                "   \U0001f4e6 Stock: " + str(int(balance)) +
+                " | \U0001f3f7 Cost: " + _cur(buy) +
+                " | \U0001f4b0 Price: " + _cur(sell) + "\n"
+            )
+    if count > 25:
+        lines.append("... +" + str(count - 25) + (" \u0623\u062e\u0631\u0649" if arabic else " more"))
     return "\n".join(lines)

@@ -18,6 +18,9 @@ INTENTS = [
     # Stock movement — before stock_query
     ("stock_movement", r"movement|حركة|دخل|خرج|وارد|صادر|transaction|history|تاريخ"),
 
+    # Product lookup: price/cost/stock for named product
+    ("product_search", r"price|cost|سعر|كلفة|تكلفة|how much|بكم|بقد ايش|كم سعر|كم ثمن|show.?me|أعطني|عطني|ابحث"),
+
     # Specific product stock
     ("stock_query",    r"stock|مخزون|مخزن|كمية|كم متبقي|كم باقي|كم عندي|موجود|inventory|كم ال"),
 
@@ -51,7 +54,7 @@ def detect_intent(text: str) -> str:
 
 def extract_product_name(text: str) -> str | None:
     cleaned = re.sub(
-        r"(stock|مخزون|كمية|كم|what is|what'?s|كم عندي|كم باقي|موجود|ما هو|ما|of|من|عن|for|ل|show|me|all|list)",
+        r"(stock|مخزون|كمية|كم|what is|what'?s|كم عندي|كم باقي|موجود|ما هو|ما|of|من|عن|for|ل|show|me|all|list|price|cost|سعر|كلفة|تكلفة|how much|بكم|أعطني|عطني|ابحث|كم سعر|كم ثمن)",
         " ", text, flags=re.IGNORECASE
     ).strip()
     cleaned = re.sub(r"[؟?]+$", "", cleaned).strip()
