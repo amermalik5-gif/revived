@@ -543,3 +543,51 @@ async def handle_dcn(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for k, v in first.items():
                 msg += f"`{k}`: {repr(v)}\n"
         await _reply(update, msg)
+
+
+@authorized_only
+async def handle_dret(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Find return invoice 000300 and check its date fields + try issue_date filter."""
+    import httpx
+    from config import DAFTRA_API_KEY, DAFTRA_SUBDOMAIN
+    H = {"apikey": DAFTRA_API_KEY, "Accept": "application/json"}
+    B = f"https://{DAFTRA_SUBDOMAIN}.daftra.com/api2"
+    async with httpx.AsyncClient(timeout=30) as cl:
+
+        # 1. Search for invoice no 000300
+        r = await cl.get(f"{B}/invoices.json", headers=H, params={"no": "000300", "limit": 5})
+        d = r.json()
+        msg = f"*Search no=000300: code={d.get('code')}, count={len(d.get('data', []))}*\n"
+        for item in d.get("data", []):
+            for key in ("Invoice", "CreditNote", "ReturnInvoice"):
+                if key in item:
+                    inv = item[key]
+                    msg += f"Key={key}, date={inv.get('date')}, issue_date={inv.get('issue_date')}, total={inv.get('summary_total')}, type={inv.get('type')}\n"
+        await _reply(update, msg)
+
+        # 2. Try issue_date filter for June 29
+        r2 = await cl.get(f"{B}/invoices.json", headers=H,
+                          params={"issue_date_from": "2026-06-29", "issue_date_to": "2026-06-29", "limit": 5})
+        d2 = r2.json()
+        msg2 = f"*issue_date filter 2026-06-29: code={d2.get('code')}, count={len(d2.get('data', []))}*\n"
+        for item in d2.get("data", [])[:3]:
+            for key in ("Invoice", "CreditNote"):
+                if key in item:
+                    inv = item[key]
+                    msg2 += f"  no={inv.get('no')}, date={inv.get('date')}, issue_date={inv.get('issue_date')}, type={inv.get('type')}\n"
+        await _reply(update, msg2)
+
+        # 3. Try fetching all invoices with no date filter and check for type != 0
+        r3 = await cl.get(f"{B}/invoices.json", headers=H, params={"limit": 100, "page": 1})
+        d3 = r3.json()
+        types_found = {}
+        keys_found = {}
+        for item in d3.get("data", []):
+            for k in item.keys():
+                keys_found[k] = keys_found.get(k, 0) + 1
+            for key in ("Invoice", "CreditNote"):
+                if key in item:
+                    t = str(item[key].get("type"))
+                    types_found[t] = types_found.get(t, 0) + 1
+        msg3 = f"*First page keys in invoices.json:* {keys_found}\n*Types:* {types_found}"
+        await _reply(update, msg3)
