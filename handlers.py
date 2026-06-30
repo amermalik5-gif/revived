@@ -395,3 +395,74 @@ async def handle_debugall(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for tv, cnt in sorted(ts_dist.items()):
             lines3.append(f"  `{tv}`: {cnt} products")
         await _reply(update, "\n".join(lines3))
+
+
+@authorized_only
+async def handle_debugall2(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Probe journals, credit_notes, purchase_invoices + product active field."""
+    import httpx
+    from config import DAFTRA_API_KEY, DAFTRA_SUBDOMAIN
+    H = {"apikey": DAFTRA_API_KEY, "Accept": "application/json"}
+    B = f"https://{DAFTRA_SUBDOMAIN}.daftra.com/api2"
+
+    async with httpx.AsyncClient(timeout=60) as cl:
+
+        # 1. credit_notes fields + total
+        r = await cl.get(f"{B}/credit_notes.json", headers=H, params={"limit": 100})
+        d = r.json()
+        batch = d.get("data", [])
+        total_cn = 0.0
+        msg = f"*📋 credit_notes: {len(batch)} records*\n"
+        if batch:
+            first = list(batch[0].values())[0] if batch[0] else {}
+            msg += "Fields: " + ", ".join(f"`{k}`" for k in list(first.keys())[:20]) + "\n"
+            for item in batch:
+                rec = list(item.values())[0] if item else {}
+                total_cn += float(rec.get("summary_total") or rec.get("total") or 0)
+            msg += f"Total amount: {total_cn:.2f} JOD"
+        await _reply(update, msg)
+
+        # 2. journals fields + client-related total
+        r2 = await cl.get(f"{B}/journals.json", headers=H, params={"limit": 100})
+        d2 = r2.json()
+        batch2 = d2.get("data", [])
+        msg2 = f"*📔 journals: {len(batch2)} records*\n"
+        if batch2:
+            first2 = list(batch2[0].values())[0] if batch2[0] else {}
+            msg2 += "Fields: " + ", ".join(f"`{k}`" for k in list(first2.keys())[:25]) + "\n"
+            # Show first record values
+            for k, v in list(first2.items())[:15]:
+                msg2 += f"  `{k}`: {repr(v)}\n"
+        await _reply(update, msg2)
+
+        # 3. purchase_invoices fields
+        r3 = await cl.get(f"{B}/purchase_invoices.json", headers=H, params={"limit": 5})
+        d3 = r3.json()
+        batch3 = d3.get("data", [])
+        msg3 = f"*🛒 purchase_invoices: {len(batch3)} records*\n"
+        if batch3:
+            first3 = list(batch3[0].values())[0] if batch3[0] else {}
+            msg3 += "Fields: " + ", ".join(f"`{k}`" for k in list(first3.keys())[:20])
+        await _reply(update, msg3)
+
+        # 4. Product active/status field check
+        prods = await daftra.get_all_products()
+        active_dist = {}
+        status_dist = {}
+        for p in prods:
+            av = str(p.get("active", "N/A"))
+            sv = str(p.get("status", "N/A"))
+            active_dist[av] = active_dist.get(av, 0) + 1
+            status_dist[sv] = status_dist.get(sv, 0) + 1
+        msg4 = "*📦 Product active field dist:*\n"
+        for k, v in sorted(active_dist.items()):
+            msg4 += f"  active=`{k}`: {v}\n"
+        msg4 += "*Product status field dist:*\n"
+        for k, v in sorted(status_dist.items()):
+            msg4 += f"  status=`{k}`: {v}\n"
+        # Also show other fields of first product
+        if prods:
+            msg4 += "\n*First product all fields:*\n"
+            for k, v in list(prods[0].items()):
+                msg4 += f"  `{k}`: {repr(v)}\n"
+        await _reply(update, msg4)
