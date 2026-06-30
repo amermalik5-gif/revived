@@ -17,11 +17,12 @@ HEADERS = {
 TIMEOUT = 30
 
 
-async def _get_all_pages(endpoint: str, key: str, params: dict = None) -> list:
-    """Fetch all pages for a paginated endpoint and extract items by key."""
+async def _get_all_pages(endpoint: str, key: str, params: dict = None, extra_keys: list = None) -> list:
+    """Fetch all pages for a paginated endpoint and extract items by key (+ optional extra keys)."""
     items = []
     page = 1
     params = params or {}
+    all_keys = [key] + (extra_keys or [])
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         while True:
             r = await client.get(
@@ -35,7 +36,11 @@ async def _get_all_pages(endpoint: str, key: str, params: dict = None) -> list:
             batch = data.get("data", [])
             if not batch:
                 break
-            items.extend([item[key] for item in batch if key in item])
+            for item in batch:
+                for k in all_keys:
+                    if k in item:
+                        items.append(item[k])
+                        break
             pagination = data.get("pagination", {})
             if page >= int(pagination.get("page_count", 1)):
                 break
@@ -108,13 +113,13 @@ async def get_stock_transactions(product_id: int = None, limit: int = 20) -> lis
 # ── Invoices / Sales ──────────────────────────────────────────────────────────
 
 async def get_invoices(date_from: str = None, date_to: str = None) -> list:
-    """Return sales invoices, optionally filtered by date range (YYYY-MM-DD)."""
+    """Return sales invoices + credit notes (returns), optionally filtered by date range."""
     params = {}
     if date_from:
         params["date_from"] = date_from
     if date_to:
         params["date_to"] = date_to
-    return await _get_all_pages("invoices.json", "Invoice", params)
+    return await _get_all_pages("invoices.json", "Invoice", params, extra_keys=["CreditNote"])
 
 
 async def get_todays_invoices() -> list:
