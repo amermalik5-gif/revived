@@ -523,3 +523,23 @@ async def handle_dp(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for k, v in first.items():
                 msg += f"`{k}`: {repr(v)}\n"
         await _reply(update, msg)
+
+
+@authorized_only
+async def handle_dcn(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show all credit_note fields."""
+    import httpx
+    from config import DAFTRA_API_KEY, DAFTRA_SUBDOMAIN
+    H = {"apikey": DAFTRA_API_KEY, "Accept": "application/json"}
+    B = f"https://{DAFTRA_SUBDOMAIN}.daftra.com/api2"
+    async with httpx.AsyncClient(timeout=20) as cl:
+        r = await cl.get(f"{B}/credit_notes.json", headers=H, params={"limit": 5})
+        d = r.json()
+        batch = d.get("data", [])
+        pg = d.get("pagination", {})
+        msg = f"*credit_notes: {pg.get('total_count', len(batch))} total*\n"
+        if batch:
+            first = list(batch[0].values())[0]
+            for k, v in first.items():
+                msg += f"`{k}`: {repr(v)}\n"
+        await _reply(update, msg)
