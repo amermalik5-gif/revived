@@ -108,8 +108,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await _reply(update, msg)
 
         elif intent == "outstanding":
-            clients = await daftra.get_clients_with_balance()
-            msg = fmt.fmt_client_balances(clients, arabic)
+            invoices = await daftra.get_outstanding_invoices()
+            msg = fmt.fmt_outstanding_invoices(invoices, arabic)
             await _reply(update, msg)
 
         elif intent == "suppliers":
@@ -149,8 +149,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif intent == "daily_summary":
             today_invoices = await daftra.get_todays_invoices()
             out_of_stock = await daftra.get_out_of_stock()
-            outstanding_clients = await daftra.get_clients_with_balance()
-            msg = fmt.fmt_daily_summary(today_invoices, out_of_stock, outstanding_clients, arabic)
+            outstanding_invoices = await daftra.get_outstanding_invoices()
+            msg = fmt.fmt_daily_summary(today_invoices, out_of_stock, outstanding_invoices, arabic)
             await _reply(update, msg)
 
         else:

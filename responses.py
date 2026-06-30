@@ -211,7 +211,7 @@ def fmt_daily_summary(
     sales_collected = sum(float(inv.get("summary_paid") or 0) for inv in today_invoices)
     sales_count = len(today_invoices)
     oos_count = len(out_of_stock)
-    outstanding_total = sum(float(c.get("balance") or 0) for c in outstanding)
+    outstanding_total = sum(float(inv.get("summary_unpaid") or 0) for inv in outstanding)
 
     if arabic:
         msg = (
