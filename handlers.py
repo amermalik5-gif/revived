@@ -466,3 +466,43 @@ async def handle_debugall2(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for k, v in list(prods[0].items()):
                 msg4 += f"  `{k}`: {repr(v)}\n"
         await _reply(update, msg4)
+
+
+@authorized_only
+async def handle_dj(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Quick: journals first record fields."""
+    import httpx
+    from config import DAFTRA_API_KEY, DAFTRA_SUBDOMAIN
+    H = {"apikey": DAFTRA_API_KEY, "Accept": "application/json"}
+    B = f"https://{DAFTRA_SUBDOMAIN}.daftra.com/api2"
+    async with httpx.AsyncClient(timeout=20) as cl:
+        r = await cl.get(f"{B}/journals.json", headers=H, params={"limit": 3})
+        d = r.json()
+        batch = d.get("data", [])
+        pg = d.get("pagination", {})
+        msg = f"*journals: {pg.get('total_count','?')} total records*\n"
+        if batch:
+            first = list(batch[0].values())[0]
+            for k, v in first.items():
+                msg += f"`{k}`: {repr(v)}\n"
+        await _reply(update, msg)
+
+
+@authorized_only
+async def handle_dp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Quick: first product all fields."""
+    import httpx
+    from config import DAFTRA_API_KEY, DAFTRA_SUBDOMAIN
+    H = {"apikey": DAFTRA_API_KEY, "Accept": "application/json"}
+    B = f"https://{DAFTRA_SUBDOMAIN}.daftra.com/api2"
+    async with httpx.AsyncClient(timeout=20) as cl:
+        r = await cl.get(f"{B}/products.json", headers=H, params={"limit": 1})
+        d = r.json()
+        batch = d.get("data", [])
+        pg = d.get("pagination", {})
+        msg = f"*products: {pg.get('total_count','?')} total*\n"
+        if batch:
+            first = list(batch[0].values())[0]
+            for k, v in first.items():
+                msg += f"`{k}`: {repr(v)}\n"
+        await _reply(update, msg)
